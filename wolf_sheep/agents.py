@@ -1,87 +1,108 @@
-from mesa.discrete_space import CellAgent, FixedAgent
-from mesa.experimental.behaviorals.decision import DecisionSystem, RulePriority
+"""Wolf-Sheep Predation with Behavioral Framework - Updated API
+
+Demonstrates the new convenience APIs:
+- BehavioralAgent base class (wires Task, Decision, State together)
+- @rule decorator for declarative rule definition
+- Lazy decay BehavioralState (no event scheduling)
+- Centralized decision evaluation in model
+"""
+
+from mesa.discrete_space import CellAgent
+from mesa.experimental.behaviorals.behavioral_agent import BehavioralAgent
 from mesa.experimental.behaviorals.state import BehavioralState
-from mesa.experimental.behaviorals.task import Task, TaskManager
-from mesa.experimental.mesa_signals.core import HasEmitters
-from mesa.time import Priority, Schedule
+from mesa.experimental.behaviorals.decision import rule, RulePriority
+from mesa.experimental.behaviorals.task import Task
+from mesa.time import Priority
 
 
-class Animal(CellAgent, HasEmitters):
-    """The base animal class utilizing the Behavioral Framework."""
-
-    # STATE & CONSTRAINTS - Energy decays automatically by 1 per time unit
-    energy = BehavioralState(decay_rate=-1.0)
+class Animal(BehavioralAgent, CellAgent):
+    """Base animal using BehavioralAgent convenience class.
+    
+    BehavioralAgent automatically provides:
+    - self.task_manager (TaskManager)
+    - self.decision_system (DecisionSystem)
+    - @rule decorator support
+    - sync_states() for materializing lazy decay
+    """
+    
+    # STATE - Energy decays automatically by 1 per time unit (lazy evaluation)
+    energy = BehavioralState(
+        decay_rate=-1.0,
+        min_value=0.0,
+        thresholds={"starving": 5.0, "hungry": 15.0}
+    )
 
     def __init__(
         self, model, energy=8, p_reproduce=0.04, energy_from_food=4, cell=None
     ):
+        # BehavioralAgent.__init__ sets up task_manager and decision_system
         super().__init__(model)
+        
         self.p_reproduce = p_reproduce
         self.energy_from_food = energy_from_food
         self.cell = cell
-
-        # QUERY INTERFACE & DECISION LOGIC
-        self.task_manager = TaskManager(self)
-        self.decision_system = DecisionSystem(self, self.task_manager)
-
-        # Locks in the initial value and lazy decay timer
+        
+        # Initialize state (triggers lazy decay clock)
         self.energy = energy
 
-        self._setup_rules()
-        self.model.schedule_recurring(
-            self.decision_system.evaluate, schedule=Schedule()
+    # DECLARATIVE RULES using @rule decorator
+
+    @rule(
+        condition=lambda self: self.energy <= 0,
+        priority=RulePriority.CRITICAL,
+        name="die_of_starvation"
+    )
+    def die(self):
+        """Critical: Die if starved."""
+        return Task(self, duration=0.0, action=self.remove, priority=Priority.HIGH)
+
+    @rule(
+        condition=lambda self: self.energy > 15 and self.random.random() < self.p_reproduce,
+        priority=RulePriority.URGENT,
+        cooldown=3.0,
+        name="reproduce"
+    )
+    def reproduce(self):
+        """Urgent: Reproduce if well-fed and lucky."""
+        return Task(
+            self,
+            duration=2.0,
+            action=self.spawn_offspring,
+            priority=Priority.DEFAULT
         )
 
-    def _setup_rules(self):
-        """Declarative Rules Engine."""
-
-        # CRITICAL: Die if starved
-        self.decision_system.add_rule(
-            name="die_of_starvation",
-            condition=lambda: self.energy <= 0,
-            action=lambda: Task(
-                agent=self, duration=0.0, action=self.remove, priority=Priority.HIGH
-            ),
-            priority=RulePriority.CRITICAL,
+    @rule(
+        condition=lambda self: self.can_feed(),
+        priority=RulePriority.HIGH,
+        name="feed"
+    )
+    def feed_rule(self):
+        """High: Feed if food is available."""
+        return Task(
+            self,
+            duration=1.0,
+            action=self.feed,
+            priority=Priority.DEFAULT
         )
 
-        # URGENT: Reproduce if well-fed and lucky (Biological Constraint)
-        self.decision_system.add_rule(
-            name="reproduce",
-            condition=lambda: self.energy > 15
-            and self.random.random() < self.p_reproduce,
-            action=lambda: Task(
-                agent=self,
-                duration=2.0,
-                action=self.spawn_offspring,
-                priority=Priority.DEFAULT,
-            ),
-            priority=RulePriority.URGENT,
-            cooldown=3.0,
+    @rule(
+        condition=lambda self: True,  # Always available as fallback
+        priority=RulePriority.DEFAULT,
+        name="wander"
+    )
+    def wander_rule(self):
+        """Default: Wander if nothing else to do."""
+        return Task(
+            self,
+            duration=1.0,
+            action=self.move,
+            priority=Priority.LOW
         )
 
-        # HIGH: Feed if food is available
-        self.decision_system.add_rule(
-            name="feed",
-            condition=self.can_feed,
-            action=lambda: Task(
-                agent=self, duration=1.0, action=self.feed, priority=Priority.DEFAULT
-            ),
-            priority=RulePriority.HIGH,
-        )
-
-        # DEFAULT: Wander blindly if nothing else to do
-        self.decision_system.add_rule(
-            name="wander",
-            condition=lambda: True,
-            action=lambda: Task(
-                agent=self, duration=1.0, action=self.move, priority=Priority.LOW
-            ),
-            priority=RulePriority.DEFAULT,
-        )
+    # Action implementations
 
     def spawn_offspring(self):
-        """Create offspring by splitting energy and creating new instance."""
+        """Create offspring by splitting energy."""
         self.energy /= 2
         self.__class__(
             self.model,
@@ -92,11 +113,12 @@ class Animal(CellAgent, HasEmitters):
         )
 
     def can_feed(self) -> bool:
-        """Fast boolean check for capability query."""
+        """Fast boolean check for food availability."""
         return False
 
     def feed(self):
-        """Action execution logic."""
+        """Feed action - override in subclasses."""
+        pass
 
     def move(self):
         """Blind movement: Move to any random neighboring cell."""
@@ -104,6 +126,8 @@ class Animal(CellAgent, HasEmitters):
 
 
 class Sheep(Animal):
+    """Sheep that graze on grass patches."""
+    
     def can_feed(self):
         grass_patch = next(
             (obj for obj in self.cell.agents if isinstance(obj, GrassPatch)), None
@@ -120,6 +144,8 @@ class Sheep(Animal):
 
 
 class Wolf(Animal):
+    """Wolf that hunts sheep."""
+    
     def can_feed(self):
         return any(isinstance(obj, Sheep) for obj in self.cell.agents)
 
@@ -131,7 +157,9 @@ class Wolf(Animal):
             sheep_to_eat.remove()
 
 
-class GrassPatch(FixedAgent):
+class GrassPatch(CellAgent):
+    """Grass that regrows after being eaten."""
+    
     def __init__(self, model, countdown, grass_regrowth_time, cell):
         super().__init__(model)
         self.fully_grown = countdown == 0
