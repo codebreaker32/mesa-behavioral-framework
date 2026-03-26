@@ -16,7 +16,7 @@ from mesa.discrete_space import OrthogonalVonNeumannGrid
 from mesa.experimental.scenarios import Scenario
 from mesa.experimental.data_collection import DataRecorder
 
-from mesa.examples.advanced.wolf_sheep.beh_agents import GrassPatch, Sheep, Wolf
+from mesa.examples.advanced.wolf_sheep.agents import GrassPatch, Sheep, Wolf
 
 
 class WolfSheepScenario(Scenario):
@@ -136,10 +136,7 @@ class WolfSheep(Model):
 
 if __name__ == "__main__":
     model = WolfSheep()
-    model.run_for(40)
+    model.run_for(80)
 
     df = model.recorder.get_table_dataframe("model_data")
     print(df.to_string())
-
-    print("\nFinal population:")
-    print(model.get_population_summary())
