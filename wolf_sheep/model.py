@@ -16,7 +16,7 @@ from mesa.discrete_space import OrthogonalVonNeumannGrid
 from mesa.experimental.scenarios import Scenario
 from mesa.experimental.data_collection import DataRecorder
 
-from mesa.examples.advanced.wolf_sheep.agents import GrassPatch, Sheep, Wolf
+from agents import GrassPatch, Sheep, Wolf
 
 
 class WolfSheepScenario(Scenario):
@@ -135,8 +135,8 @@ class WolfSheep(Model):
 
 
 if __name__ == "__main__":
-    model = WolfSheep()
-    model.run_for(80)
-
-    df = model.recorder.get_table_dataframe("model_data")
-    print(df.to_string())
+    for rng in [42,99,1234,1467]:
+        model = WolfSheep(scenario=WolfSheepScenario(rng=rng))
+        model.run_for(150)
+        df = model.recorder.get_table_dataframe("model_data")
+        df.to_csv(f"data/wolf_sheep_rng{rng}.csv", index=False)

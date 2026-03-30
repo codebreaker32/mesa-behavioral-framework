@@ -69,8 +69,6 @@ class Animal(BehavioralAgent, CellAgent):
 
 
 class Sheep(Animal):
-    # Subclasses ONLY define their specific biology
-    
     def can_feed(self):
         grass_patch = next(
             (obj for obj in self.cell.agents if isinstance(obj, GrassPatch)), None
@@ -85,6 +83,41 @@ class Sheep(Animal):
             self.energy += self.energy_from_food
             grass_patch.get_eaten()
 
+    def move(self):
+        """Move towards a cell where there isn't a wolf, and preferably with grown grass."""
+        cells_without_wolves = []
+        cells_with_grass = []
+
+        for cell in self.cell.neighborhood:
+            has_wolf = False
+            has_grass = False
+
+            for obj in cell.agents:
+                # If there's a wolf, we can early exit
+                if isinstance(obj, Wolf):
+                    has_wolf = True
+                    break
+                elif isinstance(obj, GrassPatch) and obj.fully_grown:
+                    has_grass = True
+
+            # Prefer cells without wolves
+            if not has_wolf:
+                cells_without_wolves.append(cell)
+
+                # Among safe cells, pick those with grown grass
+                if has_grass:
+                    cells_with_grass.append(cell)
+
+        # If all surrounding cells have wolves, stay put
+        if len(cells_without_wolves) == 0:
+            return
+
+        # Move to a cell with grass if available, otherwise move to any safe cell
+        target_cells = (
+            cells_with_grass if len(cells_with_grass) > 0 else cells_without_wolves
+        )
+        self.cell = self.random.choice(target_cells)
+
 
 class Wolf(Animal):
     def can_feed(self):
@@ -96,6 +129,19 @@ class Wolf(Animal):
             sheep_to_eat = self.random.choice(sheep)
             self.energy += self.energy_from_food
             sheep_to_eat.remove()
+
+    def move(self):
+        """Smart Hunting: Track adjacent sheep instead of wandering blindly."""
+        sheep_cells = []
+        for cell in self.cell.neighborhood:
+            if any(isinstance(obj, Sheep) for obj in cell.agents):
+                sheep_cells.append(cell)
+        
+        # If there are sheep nearby, chase them! Otherwise, wander.
+        if sheep_cells and self.random.random() > 0.3:  # 70% chance to chase if sheep are nearby
+            self.cell = self.random.choice(sheep_cells)
+        else:
+            self.cell = self.cell.neighborhood.select_random_cell()
 
 
 class GrassPatch(FixedAgent):
