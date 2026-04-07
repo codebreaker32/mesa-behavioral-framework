@@ -1,4 +1,4 @@
-This repository contains some initial working examples of `mesa.experimental.behaviorals`, an architectural exploration of behavioral agent support in Mesa. This is an **evaluation instrument** following Epstein's "ground truth" principle: implement first, evaluate second, rather than speculating about benefits.
+This repository contains some initial working examples of `mesa.experimental.behaviorals`, an architectural exploration of behavioral agent support in Mesa based on https://github.com/codebreaker32/mesa/tree/behaviorals. This is an **evaluation instrument** following Epstein's "ground truth" principle: implement first, evaluate second, rather than speculating about benefits.
 
 ## How to run
 
