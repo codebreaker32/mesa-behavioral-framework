@@ -135,14 +135,10 @@ class BDIModel(mesa.Model):
         observe price changes from miners that activate later — true
         asynchronous price discovery is impossible in a synchronous scheduler.
         """
-        for market in self.agents_by_type.get(Market, []):
-            market.reset_price()
+        self.agents_by_type[Market].do("reset_price")
 
         miners_before = self.count_miners
-        agents_this_step = list(self.agents_by_type.get(BDIMiner, []))
-        self.random.shuffle(agents_this_step)
-        for agent in agents_this_step:
-            agent.step()
+        self.agents_by_type[BDIMiner].shuffle_do("step")
 
         # Deaths via population delta — Eq. 19
         self._deaths_this_step = miners_before - self.count_miners

@@ -1,7 +1,4 @@
-"""Needs-Based Homeostatic Model
-Pain points are documented inline with # [Px] markers that reference the
-table in README.md §5.
-"""
+"""Needs-Based Homeostatic Model."""
 
 from __future__ import annotations
 
@@ -61,12 +58,7 @@ class WaterPatch(FixedAgent):
 # Agent
 
 class NeedsAgent(CellAgent):
-    """Homeostatic agent implementing the prepotency decision matrix (Eq. 14).
-
-    All behavioral logic lives in step(). State decay, survival check,
-    and the decision tree are manual — this is the Phase 1 baseline that
-    Phase 3 will improve upon.
-    """
+    """Homeostatic agent implementing the prepotency decision matrix (Eq. 14)."""
 
     def __init__(
         self,
@@ -120,21 +112,21 @@ class NeedsAgent(CellAgent):
     # Main step — all logic in one method (Pain Points P1–P5)
 
     def step(self) -> None:
-        """One step: decay → survival check → decide → act.
+        """One step: decay -> survival check -> decide -> act."""
 
-        Pain points visible here:
-          [P1] State decay: 3 explicit lines, one per decaying variable.
-               Adding a 4th state (e.g. fatigue) requires a 4th line.
-          [P2] Survival check always runs, even when energy is at 99.
-               No threshold callback; the condition is polled every tick.
-          [P3] Priority is encoded positionally in if/elif order.
-               Adding a new high-priority behavior requires finding the
-               right insertion point in the chain.
-          [P4] Cooldown is a raw float that needs manual decrement and clamp.
-          [P5] State evolution, survival, and decision logic are all
-               entangled in this one method. Testing any branch in isolation
-               requires constructing a full agent.
-        """
+        # Pain points visible here:
+        #   [P1] State decay: 3 explicit lines, one per decaying variable.
+        #        Adding a 4th state (e.g. fatigue) requires a 4th line.
+        #   [P2] Survival check always runs, even when energy is at 99.
+        #        No threshold callback; the condition is polled every tick.
+        #   [P3] Priority is encoded positionally in if/elif order.
+        #        Adding a new high-priority behavior requires finding the
+        #        right insertion point in the chain.
+        #   [P4] Cooldown is a raw float that needs manual decrement and clamp.
+        #   [P5] State evolution, survival, and decision logic are all
+        #        entangled in this one method. Testing any branch in isolation
+        #        requires constructing a full agent.
+        
         self.gave_birth_this_step = False
 
         # [P1] Manual state decay — Eq. 1, 2, 3
@@ -228,10 +220,7 @@ class NeedsAgent(CellAgent):
         self.cell = min(neighbors, key=lambda c: _euclidean(c, target_cell))
 
     def _nearest_resource(self, patch_type: type, attr: str) -> Optional[Cell]:
-        """Return the nearest cell with an active patch of patch_type, or None.
-
-        Scans P_obs (Eq. 5) and returns the cell minimising Eq. 6.
-        """
+        """Return the nearest cell with an active patch of patch_type, or None."""
         best_cell = None
         best_dist = float("inf")
         

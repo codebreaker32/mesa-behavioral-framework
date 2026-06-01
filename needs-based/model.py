@@ -13,10 +13,7 @@ from agents import FoodPatch, NeedsAgent, WaterPatch
 # Scenario
 
 class NeedsBasedScenario(Scenario):
-    """All tunable parameters for the needs-based model.
-
-    Symbol comments map directly to README.md §2 variable definitions.
-    """
+    """All tunable parameters for the needs-based model."""
 
     # Grid
     width: int = 25
