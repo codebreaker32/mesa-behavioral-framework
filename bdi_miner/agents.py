@@ -19,13 +19,7 @@ from mesa.discrete_space.cell import Cell
 
 
 class Intention(Enum):
-    """Active cognitive commitment of the BDI agent.
-
-    Using an Enum (rather than raw string constants) gives IDE support and
-    prevents typo bugs. In vanilla Mesa this is still boilerplate — a Phase 3
-    framework would replace these with structured Intention objects so the
-    TaskManager can manage duration and interruption automatically. [P6]
-    """
+    """Active cognitive commitment of the BDI agent."""
     IDLE            = auto()
     NAVIGATE_MINE   = auto()
     MINING          = auto()
